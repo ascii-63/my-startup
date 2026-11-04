@@ -1,0 +1,14 @@
+---
+description: Fork intent for my-startup — Cursor sessions in My Office, and what to change next
+alwaysApply: true
+---
+
+# Fork intent
+
+Read `docs/FORK.md` before editing. This repo is a fork of khanh020905/my-office (`origin`: ascii-63/my-startup). Keep the 3D office. The owner’s customizations:
+
+- Cursor Agent chats (any model) are people in the office, through `hooks/cursor.mjs` → `POST /event`. Claude Code hooks stay. The hook prints `{}` and exits 0.
+- Remove the top-bar Claude plan pill and its card, and the activity board’s API price tile. Leave drawer cost, the accountant, and “What eats your plan” until asked.
+- Do not reskin the office scenes, rename the package, or turn Cursor hooks into approval gates unless asked.
+
+Next, if it is still open: update e2e tests that click `#btn-plan`, verify `http://localhost:4310`, then improve Cursor titles and last replies. Re-run `node bin/cli.mjs install` with a Node binary that is not under `fnm_multishells`, because those hook paths die with the shell. Do not commit `package-lock.json` noise. Commit only when asked.

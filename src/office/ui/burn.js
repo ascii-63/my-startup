@@ -1,7 +1,7 @@
 // What eats your plan: where Claude Code's usage goes, by model, MCP server, skill, plugin, subagent, project and session.
 // From Claude Code's own OpenTelemetry numbers (server/otel.mjs, summed by src/shared/burn.js), today or over the last 7
 // days, in USD at API prices and, when the plan's week is known, in % of the weekly limit. A drawer of its own (from the
-// plan card's line, the group chat's •••, or ?burn in the address), a full-screen sheet on a phone. Read when it opens,
+// group chat's •••, or ?burn in the address), a full-screen sheet on a phone. Read when it opens,
 // then every 20 s while it is open and the tab shows; only the last reading is kept.
 import { $, el, fmtAgo, pad2 } from '../core/env.js';
 import { TOKEN } from '../net/live.js';
@@ -202,16 +202,11 @@ export function setup() {
     const b = e.target.closest('[data-range]'); if (!b || b.dataset.range === range) return;
     range = b.dataset.range; loading(); syncTabs(); load();
   });
-  $('plan-burn').addEventListener('click', () => openBurn('today'));
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !drB.hidden) closeBurn(); });
   document.addEventListener('visibilitychange', tick);
-  // one drawer at a time: the Mac's or a session's opening closes this one; the plan card opening reads today's line
-  const watch = new MutationObserver((recs) => {
-    if (!drM.hidden || !drS.hidden) closeBurn();
-    if (!recs.some((r) => r.target.id === 'pop-plan') || $('pop-plan').hidden) return;
-    if (last?.range === 'today' && Date.now() - lastAt < 20e3) peekText(last); else fetchBurn('today').then(peekText);
-  });
-  for (const n of [drM, drS, $('pop-plan')]) watch.observe(n, { attributes: true, attributeFilter: ['hidden'] });
+  // one drawer at a time: the Mac's or a session's opening closes this one
+  const watch = new MutationObserver(() => { if (!drM.hidden || !drS.hidden) closeBurn(); });
+  for (const n of [drM, drS]) watch.observe(n, { attributes: true, attributeFilter: ['hidden'] });
   // ?burn (or ?burn=7d): open at once, for a link from a phone
   const q = new URLSearchParams(location.search);
   if (q.has('burn')) setTimeout(() => openBurn(q.get('burn') === '7d' ? '7d' : 'today'), 300);

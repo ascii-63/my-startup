@@ -84,7 +84,7 @@ export function setup() {
   emptyEl = el('div', 'ph-empty'); emptyEl.hidden = true;
   emptyEl.append(icon('check'), el('b', null, tr('ui.phone.approveEmpty')), el('span', null, tr('ui.phone.approveEmptySub')));
   $('app').append(bar, emptyEl);
-  for (const host of [document.querySelector('.side-left'), $('feed'), $('pop-plan'), $('pop-look')]) closer(host);
+  for (const host of [document.querySelector('.side-left'), $('feed'), $('pop-plan'), $('pop-look')]) if (host) closer(host);
   // the counts on the tabs, and the chat closed from inside
   const watch = new MutationObserver(() => sync());
   for (const id of ['perm-stack', 'st-wait', 'chat-badge']) { const n = $(id); if (n) watch.observe(n, { childList: true, characterData: true, subtree: true, attributes: true }); }

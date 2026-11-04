@@ -324,37 +324,43 @@ function renderAdd() {
   box.replaceChildren(card);
 }
 export function renderLimits() {
-  const ws = liveWindows(), box = $('plan-card'), others = state.limits?.others || [], none = !ws.length && !others.length;
-  box.classList.toggle('is-empty', none);
-  { // the pill shows the tightest limit (5 hours, the week, a model's week), coloured by how close it is
-    const pill = $('btn-plan'), top = tightest(ws);
-    pill.hidden = false;
-    // other accounts: their tightest limit after the main one ("5 h 29% · org2 12%")
-    const more = others.map((o) => { const t = tightest(liveOf(o)); return t ? ` · ${o.label || o.name} ${Math.round(t.pct)}%` : ''; }).join('');
-    $('plan-mini').textContent = (top ? `${top.key === 'session' ? tr('mac.plan.fiveHour') : top.label} ${Math.round(top.pct)}%` : state.limitsNote ? tr('mac.plan.unread') : tr('mac.plan.reading')) + more;
-    $('plan-bar').style.width = `${top ? Math.min(100, Math.max(2, top.pct)) : 0}%`;
-    pill.dataset.level = top ? limitLevel(top.pct) : 'normal';
-    pill.title = top ? tr('mac.plan.pillTitle', { text: `${ws.map((w) => `${w.label} ${Math.round(w.pct)}%`).join(' · ')}${top.resetsAt ? ` · ${tr('mac.plan.labelResets', { label: top.label, when: resetText(top.resetsAt) })}` : ''}` }) : state.limitsNote || tr('mac.plan.title');
+  const ws = liveWindows(), box = $('plan-card'), pill = $('btn-plan'), others = state.limits?.others || [], none = !ws.length && !others.length;
+  // the pill and the card are gone from the top bar: nothing here to draw. The 80% / 95% toast below does not need them.
+  if (box && pill) {
+    box.classList.toggle('is-empty', none);
+    { // the pill shows the tightest limit (5 hours, the week, a model's week), coloured by how close it is
+      const top = tightest(ws);
+      pill.hidden = false;
+      // other accounts: their tightest limit after the main one ("5 h 29% · org2 12%")
+      const more = others.map((o) => { const t = tightest(liveOf(o)); return t ? ` · ${o.label || o.name} ${Math.round(t.pct)}%` : ''; }).join('');
+      $('plan-mini').textContent = (top ? `${top.key === 'session' ? tr('mac.plan.fiveHour') : top.label} ${Math.round(top.pct)}%` : state.limitsNote ? tr('mac.plan.unread') : tr('mac.plan.reading')) + more;
+      $('plan-bar').style.width = `${top ? Math.min(100, Math.max(2, top.pct)) : 0}%`;
+      pill.dataset.level = top ? limitLevel(top.pct) : 'normal';
+      pill.title = top ? tr('mac.plan.pillTitle', { text: `${ws.map((w) => `${w.label} ${Math.round(w.pct)}%`).join(' · ')}${top.resetsAt ? ` · ${tr('mac.plan.labelResets', { label: top.label, when: resetText(top.resetsAt) })}` : ''}` }) : state.limitsNote || tr('mac.plan.title');
+    }
+    const acc = state.limits?.account, accText = acc ? [acc.plan, acc.org].filter(Boolean).join(' · ') : '';
+    $('plan-acct').hidden = true;   // (the plan sits in the main account's heading)
+    if (adding.step === 'idle') renderAdd();
+    if (none) { $('plan-at').textContent = ''; $('plan-empty').textContent = state.limitsNote || tr('mac.plan.loading'); }
+    else {
+      $('plan-at').textContent = state.limits.at ? (Date.now() - state.limits.at < 60e3 ? tr('mac.plan.justUpdated') : tr('time.ago', { time: fmtAgo((Date.now() - state.limits.at) / 1000) })) : '';
+      if (editing === null && !dragging) {   // (a name being typed, an account being dragged: drawn again after)
+        const rows = $('plan-rows'); rows.replaceChildren();
+        const mainRows = acctBlock('', state.limits.label, accText, state.limits.until); rows.append(mainRows);
+        if (!ws.length) mainRows.append(el('small', 'plan-other-note', state.limitsNote || tr('mac.plan.loading')));
+        for (const w of ws) limitRow(mainRows, w);
+        // no week over all models: org plans (Team / Enterprise) don't have one; a personal plan that shows none is still being read
+        if (ws.length && !ws.some((w) => w.key === 'weekly')) {
+          const org = ORG_PLANS.has(acc?.plan), m = el('span', 'hl-m plan-none');
+          m.append(el('span', null, tr('mac.plan.week')), el('span', 'plan-none-t', org ? tr('mac.plan.noneOnPlan', { plan: acc.plan }) : tr('mac.plan.unread')), el('em', null, '–'));
+          m.title = org ? tr('mac.plan.orgNoWeek') : tr('mac.plan.personalWeekSoon');
+          mainRows.append(m, el('small', 'plan-reset', ''));
+        }
+        renderOthers(rows);
+        if (adding.step === 'login' && others.some((o) => o.name === adding.data?.name)) { adding.step = 'done'; renderAdd(); }
+      }
+    }
   }
-  const acc = state.limits?.account, accText = acc ? [acc.plan, acc.org].filter(Boolean).join(' · ') : '';
-  $('plan-acct').hidden = true;   // (the plan sits in the main account's heading)
-  if (adding.step === 'idle') renderAdd();
-  if (none) { $('plan-at').textContent = ''; $('plan-empty').textContent = state.limitsNote || tr('mac.plan.loading'); return; }
-  $('plan-at').textContent = state.limits.at ? (Date.now() - state.limits.at < 60e3 ? tr('mac.plan.justUpdated') : tr('time.ago', { time: fmtAgo((Date.now() - state.limits.at) / 1000) })) : '';
-  if (editing !== null || dragging) return;   // (a name being typed, an account being dragged: drawn again after)
-  const rows = $('plan-rows'); rows.replaceChildren();
-  const mainRows = acctBlock('', state.limits.label, accText, state.limits.until); rows.append(mainRows);
-  if (!ws.length) mainRows.append(el('small', 'plan-other-note', state.limitsNote || tr('mac.plan.loading')));
-  for (const w of ws) limitRow(mainRows, w);
-  // no week over all models: org plans (Team / Enterprise) don't have one; a personal plan that shows none is still being read
-  if (ws.length && !ws.some((w) => w.key === 'weekly')) {
-    const org = ORG_PLANS.has(acc?.plan), m = el('span', 'hl-m plan-none');
-    m.append(el('span', null, tr('mac.plan.week')), el('span', 'plan-none-t', org ? tr('mac.plan.noneOnPlan', { plan: acc.plan }) : tr('mac.plan.unread')), el('em', null, '–'));
-    m.title = org ? tr('mac.plan.orgNoWeek') : tr('mac.plan.personalWeekSoon');
-    mainRows.append(m, el('small', 'plan-reset', ''));
-  }
-  renderOthers(rows);
-  if (adding.step === 'login' && others.some((o) => o.name === adding.data?.name)) { adding.step = 'done'; renderAdd(); }
   for (const w of [...ws, ...others.flatMap((o) => liveOf(o).map((x) => ({ ...x, key: `${o.name}:${x.key}`, label: `${o.name} · ${x.label}` })))]) {
     if (w.pct < 80) continue;
     const key = `${w.key}:${w.resetsAt}:${w.pct >= 95 ? 95 : 80}`;

@@ -56,7 +56,8 @@ function showTab(k, focus = false) {
 export function togglePop(open = popLook.hidden) { popLook.hidden = !open; btnLook.setAttribute('aria-expanded', String(open)); if (open) { togglePlan(false); showTab(tabNow); } }
 let popPlan;
 let btnPlan;
-export function togglePlan(open = popPlan.hidden) { popPlan.hidden = !open; btnPlan.setAttribute('aria-expanded', String(open)); if (open) { togglePop(false); renderLimits(); renderAi(); } }
+// the plan pill and its card are gone: callers (Escape, the phone sheets, the burn drawer) still call this
+export function togglePlan(open = popPlan?.hidden) { if (!popPlan || !btnPlan) return; popPlan.hidden = !open; btnPlan.setAttribute('aria-expanded', String(open)); if (open) { togglePop(false); renderLimits(); renderAi(); } }
 function setStreamer(v) {
   state.streamer = v; document.body.classList.toggle('is-stream', v); state.boardDirty = true; for (const n of stickyNotes) if (n) n.key = '';
   try { localStorage.setItem('office-stream', v ? 'on' : 'off'); } catch { /* storage blocked */ }
@@ -100,11 +101,13 @@ export function setup() {
   });
   addEventListener('keydown', (e) => { if (e.key === 'Escape' && !popLook.hidden) { togglePop(false); btnLook.focus(); } });
   document.addEventListener('click', (e) => { if (!popLook.hidden && !e.target.closest('#pop-look, #btn-look')) togglePop(false); });
-  // the plan popover, opened from its pill
+  // the plan popover, opened from its pill (no-op when the pill and the card are not on the page)
   popPlan = $('pop-plan'); btnPlan = $('btn-plan');
-  btnPlan.addEventListener('click', (e) => { e.stopPropagation(); togglePlan(); });
-  // (a click on something the card just replaced (a step of adding an account) isn't a click outside it)
-  document.addEventListener('click', (e) => { if (!popPlan.hidden && e.target.isConnected && !e.target.closest('#pop-plan, #btn-plan')) togglePlan(false); });
+  if (popPlan && btnPlan) {
+    btnPlan.addEventListener('click', (e) => { e.stopPropagation(); togglePlan(); });
+    // (a click on something the card just replaced (a step of adding an account) isn't a click outside it)
+    document.addEventListener('click', (e) => { if (!popPlan.hidden && e.target.isConnected && !e.target.closest('#pop-plan, #btn-plan')) togglePlan(false); });
+  }
   popLook.addEventListener('click', (e) => {
     const tb = e.target.closest('[data-st-tab]'); if (tb) { showTab(tb.dataset.stTab); return; }
     if (e.target.closest('#st-close')) { togglePop(false); btnLook.focus(); return; }

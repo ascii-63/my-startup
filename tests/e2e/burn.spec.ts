@@ -4,7 +4,7 @@ import { test, expect, devices, type Page, type APIRequestContext } from '@playw
 import { HOME_DIR } from '../../playwright.config';
 
 // What eats your plan (server/otel.mjs, ui/burn.js): the office's OpenTelemetry receiver fed the way Claude Code feeds it
-// (the OTLP/HTTP JSON fixtures of tests/fixtures/otel, moved to now), then the panel, the plan card's line, the chat's
+// (the OTLP/HTTP JSON fixtures of tests/fixtures/otel, moved to now), then the panel from the group chat's •••, the chat's
 // way in on a phone, and what the receiver refuses. In order: the empty state first, before anything is sent.
 test.describe.configure({ mode: 'serial' });
 
@@ -90,14 +90,12 @@ test('fed like Claude Code feeds it: the panel ranks who eats the plan, and the 
   expect(d.plan.pct).toBe(46);
 
   await page.goto('/?layout=cozy');
-  await expect(page.locator('#btn-plan')).toBeVisible({ timeout: 60_000 });
-  // the plan card's line: today's cost and the two that eat most, a way into the panel
-  await page.click('#btn-plan');
-  await expect(page.locator('#plan-burn')).toContainText('Today: $1.77 · MCP github 17%');
-  await page.click('#plan-burn');
+  // the group chat's ••• : "What eats your plan" (burn.open) opens the drawer
+  await expect(async () => { if (!(await page.locator('#zchat').isVisible())) await page.click('#btn-chat'); await expect(page.locator('#zchat')).toBeVisible({ timeout: 2000 }); }).toPass({ timeout: 60_000 });
+  await page.locator('#zchat .zc-toolbar [title="More"], #zchat .zc-bar .zc-mo[title="More"]').first().click();
+  await page.locator('#zchat .zc-more-o', { hasText: 'What eats your plan' }).click();
   const body = page.locator('#burn-body');
   await expect(page.locator('#dr-burn')).toBeVisible();
-  await expect(page.locator('#pop-plan')).toBeHidden();
   await expect(body.locator('.bn-total')).toHaveText('$1.77');
   await expect(body.locator('.bn-plan')).toHaveText('≈ 46% of your weekly limit');
   const rank = body.locator('.bn-rank li');

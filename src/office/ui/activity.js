@@ -229,7 +229,7 @@ function onListClick(ev) {
 }
 export const fmtTok = (n) => (n >= 1e6 ? `${num(n / 1e6, 1)}M` : `${Math.round(n / 1000)}k`);
 export const fmtUsd = (v) => `$${v >= 100 ? Math.round(v) : v.toFixed(2)}`;
-const KPIS = [['prompts', 'clipboard'], ['read', 'file'], ['edit', 'pencil'], ['cmd', 'terminal'], ['cost', 'coin']];   // labels: activity.kpi.<key>
+const KPIS = [['prompts', 'clipboard'], ['read', 'file'], ['edit', 'pencil'], ['cmd', 'terminal']];   // labels: activity.kpi.<key>
 export function renderHud() {
   const list = [...sessions.values()];
   const waiting = list.filter((s) => s.status === 'wait').length;
@@ -237,10 +237,8 @@ export function renderHud() {
   $('active-count').textContent = list.length ? tr('activity.sessions', { n: list.length }) + (subCount ? ` · ${tr('activity.subsRunning', { n: subCount })}` : '') : tr('activity.noSessions');
   $('feed-stats').replaceChildren(...KPIS.map(([k, ic]) => {
     const label = tr(`activity.kpi.${k}`);
-    const d = el('div', k === 'cost' ? 'kpi kpi--cost' : 'kpi'), i = el('span', 'kpi-ic'); i.append(icon(ic));
-    const b = el('b', null, k === 'cost' ? fmtUsd(list.reduce((a, s) => a + (s.usage?.cost || 0), 0)) : num(state.stats[k] || 0));
-    if (k === 'cost') b.prepend(el('small', null, '≈'));   // (an estimate: the list price, not a bill)
-    d.append(i, b, el('span', null, label)); d.title = k === 'cost' ? tr('activity.costTitle') : tr('activity.kpiToday', { label });
+    const d = el('div', 'kpi'), i = el('span', 'kpi-ic'); i.append(icon(ic));
+    d.append(i, el('b', null, num(state.stats[k] || 0)), el('span', null, label)); d.title = tr('activity.kpiToday', { label });
     return d;
   }));
   $('bell-dot').hidden = !waiting;

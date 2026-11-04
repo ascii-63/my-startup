@@ -1150,54 +1150,6 @@ test('karaoke: someone resting goes into the box and sings, and in first person 
   expect(errors).toEqual([]);
 });
 
-test('adding a Claude account: a folder of its own, connected to the office, signed in from the card', async ({ page }) => {
-  test.setTimeout(420_000);   // (signing in, renaming, picking, then the page once more: ~5 min on a busy machine)
-  const errors = watchErrors(page), dir = path.join(HOME_DIR, '.claude-cong-ty');
-  fs.rmSync(dir, { recursive: true, force: true });
-  await page.goto('/');   // (the real office, on this computer: not the demo)
-  await page.click('#btn-plan');
-  await page.click('.plan-add-btn');
-  await page.fill('.pa-form input', 'Công ty');
-  await page.click('.pa-form [type=submit]');
-  // the sign-in runs by itself (tests/e2e/fake-claude.sh stands in for Claude Code): the page to open again, then done
-  await expect(page.locator('.pa-browser')).toBeVisible({ timeout: 20_000 });
-  const settings = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));
-  expect(settings.hooks?.SessionStart?.length).toBeGreaterThan(0);   // (its sessions show in the office too)
-  await expect(page.locator('.pa-done')).toBeVisible({ timeout: 30_000 });
-  await expect(page.locator('.plan-other b', { hasText: 'cong-ty' })).toBeVisible();
-  // hovering an account: a name of the user's own, and "Use" for the account new sessions start on
-  const acct = (name: string) => page.locator('.acct-block', { has: page.locator('.acct-name b', { hasText: name }) });
-  await acct('cong-ty').hover();
-  await acct('cong-ty').locator('.acct-name').click();
-  await page.fill('.acct-rename input', 'Việc công ty');
-  await page.keyboard.press('Enter');
-  await expect(acct('Việc công ty')).toBeVisible();
-  await acct('Việc công ty').hover();
-  await acct('Việc công ty').locator('.acct-use').click();
-  await expect(acct('Việc công ty').locator('.acct-badge--on')).toBeVisible();
-  await expect(page.locator('.acct-block').first()).toContainText('Việc công ty');   // ("Use" puts it at the top of the order)
-  const main = acct('Main account');
-  await main.hover();
-  await main.locator('.acct-use').click();   // (back to the main account: the other tests expect it)
-  await expect(main.locator('.acct-badge--on')).toBeVisible();
-  // switching by itself when one runs out
-  const sw = page.locator('.acct-switch');
-  await sw.click();
-  await expect(sw).toHaveAttribute('aria-checked', 'true');
-  await sw.click();
-  await expect(sw).toHaveAttribute('aria-checked', 'false');
-  // the name stays; then back to the folder's own name for the next run
-  await page.reload();
-  await expect(page.locator('#btn-plan')).toBeVisible({ timeout: 90_000 });   // (shown once the limits arrive)
-  await page.click('#btn-plan');
-  await expect(acct('Việc công ty')).toBeVisible({ timeout: 20_000 });
-  await acct('Việc công ty').locator('.acct-name').click();
-  await page.fill('.acct-rename input', '');
-  await page.keyboard.press('Enter');
-  await expect(acct('cong-ty')).toBeVisible();
-  expect(errors).toEqual([]);
-});
-
 test('an open conversation moves to another account: stopped while it rests, started on that account when resumed', async ({ page, request }) => {
   test.setTimeout(240_000);
   const errors = watchErrors(page), data = DATA_DIR, sessDir = path.join(HOME_DIR, '.claude', 'sessions');
@@ -1205,7 +1157,7 @@ test('an open conversation moves to another account: stopped while it rests, sta
   fs.mkdirSync(path.join(HOME_DIR, '.claude', 'projects'), { recursive: true });   // (the history the accounts share)
   fs.mkdirSync(path.join(HOME_DIR, '.vscode', 'extensions', 'anthropic.claude-code-e2e'), { recursive: true });   // (an editor with Claude Code's extension)
   fs.mkdirSync(sessDir, { recursive: true });
-  // a second account, signed in the way the card does it (tests/e2e/fake-claude.sh)
+  // a second account, created through the account API (tests/e2e/fake-claude.sh stands in for Claude Code)
   fs.rmSync(acctDir, { recursive: true, force: true });
   expect((await request.post('/api/accounts', { data: { name: 'phu e2e' } })).ok()).toBeTruthy();
   await expect.poll(() => fs.existsSync(path.join(acctDir, '.claude.json')), { timeout: 30_000 }).toBe(true);
