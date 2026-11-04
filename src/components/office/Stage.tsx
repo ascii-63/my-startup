@@ -22,7 +22,6 @@ export default async function Stage() {
       <div className="incident" id="incident" hidden role="alert"></div>
       <ReplayBar />
       <PhotoBar />
-      <div className="empty" id="empty" hidden><b>{t('ui.stage.emptyTitle')}</b><span className="muted">{t('ui.stage.emptyText')}</span></div>
     </main>
   );
 }

@@ -166,8 +166,6 @@ export default {
   stage: {
     chips: 'Phiên làm việc',
     lite: 'Các phiên dạng danh sách',
-    emptyTitle: 'Chưa có phiên Claude nào đang mở',
-    emptyText: 'Mở Claude Code trong Antigravity, nhân vật sẽ đi vào văn phòng.',
   },
   timeline: {
     title: 'Dòng thời gian',

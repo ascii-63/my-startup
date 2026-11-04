@@ -219,7 +219,6 @@ function renderRail() {
     for (const [k] of GROUPS) { rail.append(grpEls[k].li); for (const s of all) if (s.status === k) rail.append(railRows.get(s.id).li); }
     for (const s of all) chips.append(railRows.get(s.id).c);
   }
-  $('empty').hidden = all.length > 0 || !state.connectedOnce;
   for (const w of workers.values()) w.tagEl.classList.toggle('tag--on', w.id === state.selectedId);
 }
 function onListClick(ev) {

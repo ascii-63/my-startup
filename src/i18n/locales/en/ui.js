@@ -166,8 +166,6 @@ export default {
   stage: {
     chips: 'Sessions',
     lite: 'Sessions as a list',
-    emptyTitle: 'No Claude sessions open yet',
-    emptyText: 'Open Claude Code in Antigravity and a character will walk into the office.',
   },
   timeline: {
     title: 'Timeline',
