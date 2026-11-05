@@ -51,9 +51,10 @@ Claude Code ──OpenTelemetry (OTLP/HTTP JSON)──▶ /v1/metrics, /v1/logs 
 `bin/cli.mjs` installs the hooks (curl on macOS and Linux, `hooks/send.mjs` on Windows) and, through `bin/service.mjs`, the
 background service: launchd, a systemd user service, or a script in the Windows Startup folder. The same `install` merges
 Cursor's user hooks into `~/.cursor/hooks.json`: `hooks/cursor.mjs` reads Cursor's stdin JSON, `hooks/cursor-map.mjs` turns
-it into the Claude Code event shape (`session_id`, `cwd`, `Shell` → `Bash`, `StrReplace` → `Edit`), and posts it to `/event`.
+it into the Claude Code event shape (`session_id`, `cwd`, `Shell` → `Bash`, `StrReplace` → `Edit`), optionally adds a
+`context` object (`size` from `model_params`, `tokens` / `pct` / `size` from `preCompact`), and posts it to `/event`.
 The server tags that session `agent: "cursor"` and keeps it until `SessionEnd` instead of the 10-minute hook-only timeout.
-`--no-cursor` skips the file; `uninstall` removes only those commands.
+Subagent records keep `ctx` and `ctxMax` when hooks supply them. `--no-cursor` skips the file; `uninstall` removes only those commands.
 
 Runtime state lives in `data/` (git-ignored): the access token, phone PIN, replay logs (7 days), usage sums (`otel/`, 30 days), totals, each project's working life (`tenure.json`), caches.
 
@@ -181,7 +182,7 @@ engine switches to demo mode and talks to no API.
 | `scene/lights.js` | 35 | Sun, sky light and the room lamps (per-room night lighting on the company floor). |
 | `scene/quality.js` | 77 | Graphics quality: Auto (the default), Low, Medium or High, each viewer's own choice (Settings → Display). |
 | `scene/renderer.js` | 91 | Renderer, cameras, orbit controls, post-processing and environment light. |
-| `ui/activity.js` | 301 | The activity column and the session list. |
+| `ui/activity.js` | The activity column and the session list; the feed lists only the browser's local **today** (replay unchanged). |
 | `ui/ai-accounts.js` | 270 | The other AI tools' accounts, in the plan card under Claude's (server/codex-accounts.mjs, antigravity-accounts.mjs): Codex and Antigravity IDE, each with its accounts (usage, the one in use, out until when), adding one, using another, and switching by itself when the one in use runs out. |
 | `ui/burn.js` | 218 | What eats your plan: where Claude Code's usage goes, by model, MCP server, skill, plugin, subagent, project and session. |
 | `ui/cache-words.js` | 53 | How a session's prompt cache reads on screen ("Đồng hồ bộ nhớ đệm", src/shared/cache-clock.js; the cups on the desks are world/props/cups.js): the line under the session drawer's folder, the one under the chat's "Gửi tới" and in its list of conversations, list mode's cards, and the switch in Settings → More for the "about to go cold" notification. |
@@ -206,7 +207,7 @@ engine switches to demo mode and talks to no API.
 | `ui/pins.js` | 63 | "Ghi nhớ cho Claude" (server: /api/pins, /hook/start): what you want a conversation to keep in mind, said to Claude again each time Claude Code compacts it. |
 | `ui/portraits.js` | 64 | Portraits of the two character looks for Settings → Characters: two people in each look, drawn by the office's own renderer (same materials, light and tone mapping, so they match what you will see) into a canvas, the first time the tab opens. |
 | `ui/session-account.js` | 54 | "Change account" in a session's drawer (on this computer only): the accounts of the plan card, each with what it has left. |
-| `ui/session-drawer.js` | 398 | The session drawer: chat, steps, subagents. |
+| `ui/session-drawer.js` | The session drawer: chat, steps, subagents; subagent drill-in shows Cursor context when `ctx` / `ctxMax` are set. |
 | `ui/settings.js` | 126 | Settings popover: backdrop, floor plan, look, time, toggles. |
 | `ui/stranded.js` | 159 | "Việc bỏ quên" in the Mac drawer: the worktrees and checkouts of the repositories the office knows that still hold work (files not committed, commits not pushed, stashes), and worktrees with nothing left in them that could go. |
 | `ui/stuck.js` | 97 | Stuck sessions ("Ngắt vòng lặp kẹt", server/loops.mjs): the card in the group chat (what repeats, Stop, a hint for Claude) and the row in Settings → More (on or off, after how many failures, after how many minutes of spending with nothing edited). |

@@ -70,6 +70,12 @@ test('prompt, tools, subagent, stop and session end become office events', () =>
   assert.equal(start.source, 'agent');
 
   assert.equal(mapCursor({ ...base, hook_event_name: 'preCompact', trigger: 'auto' }).trigger, 'auto');
+  const compact = mapCursor({ ...base, hook_event_name: 'preCompact', trigger: 'auto', parent_conversation_id: 'conv-parent', subagent_id: 'sub-9', context_usage_percent: 85, context_tokens: 120000, context_window_size: 128000 });
+  assert.equal(compact.session_id, 'conv-parent');
+  assert.equal(compact.agent_id, 'sub-9');
+  assert.deepEqual(compact.context, { pct: 85, tokens: 120000, size: 128000 });
+  const sized = mapCursor({ ...base, hook_event_name: 'subagentStart', parent_conversation_id: 'conv-parent', subagent_id: 'sub-9', subagent_type: 'explore', model_params: [{ id: 'context', value: '1m' }] });
+  assert.deepEqual(sized.context, { size: 1_000_000 });
   assert.equal(mapCursor({ ...base, hook_event_name: 'beforeShellExecution' }), null);
   assert.equal(mapCursor({ hook_event_name: 'stop' }), null);
   assert.equal(mapCursor({ ...base, hook_event_name: 'sessionStart', model: 'default', model_id: '' }).model, undefined);

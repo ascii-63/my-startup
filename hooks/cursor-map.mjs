@@ -21,6 +21,38 @@ const modelOf = (v) => {
   return s && s.toLowerCase() !== 'default' ? s : '';
 };
 
+const numOf = (v) => {
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+};
+
+// model_params entry { id: "context", value: "1m" | "200k" | "128000" } is the window, not how full it is.
+const windowOf = (params) => {
+  if (!Array.isArray(params)) return null;
+  const raw = params.find((x) => x && x.id === 'context')?.value;
+  if (raw == null || raw === '') return null;
+  const s = String(raw).trim().toLowerCase();
+  const m = /^(\d+(?:\.\d+)?)([km])?$/.exec(s);
+  if (!m) return null;
+  const n = Number(m[1]);
+  if (m[2] === 'm') return Math.round(n * 1_000_000);
+  if (m[2] === 'k') return Math.round(n * 1000);
+  return n;
+};
+
+// preCompact carries the live fill. Other hooks may only know the window.
+const contextOf = (p) => {
+  const pct = numOf(p.context_usage_percent);
+  const tokens = numOf(p.context_tokens);
+  const size = numOf(p.context_window_size) ?? windowOf(p.model_params);
+  if (pct == null && tokens == null && size == null) return null;
+  const out = {};
+  if (pct != null) out.pct = pct;
+  if (tokens != null) out.tokens = tokens;
+  if (size != null) out.size = size;
+  return out;
+};
+
 const toolName = (name) => {
   const s = String(name || '');
   if (s.startsWith('MCP:')) return `mcp__${s.slice(4).replace(/:/g, '__')}`;
@@ -33,7 +65,10 @@ export function mapCursor(p) {
   let hook = EVENT[p.hook_event_name];
   if (!hook) return null;
   const sub = p.hook_event_name === 'subagentStart' || p.hook_event_name === 'subagentStop';
-  const session_id = String((sub && p.parent_conversation_id) || p.session_id || p.conversation_id || '').trim();
+  const child = p.subagent_id || p.agent_id;
+  // A subagent's own compaction still names the parent conversation. Keep it on that person.
+  const forChild = sub || (p.hook_event_name === 'preCompact' && p.parent_conversation_id && child);
+  const session_id = String((forChild && p.parent_conversation_id) || p.session_id || p.conversation_id || '').trim();
   if (!session_id) return null;
   if (hook === 'Stop' && p.status === 'error') hook = 'StopFailure';
 
@@ -42,6 +77,8 @@ export function mapCursor(p) {
   if (p.transcript_path) out.transcript_path = p.transcript_path;
   const model = modelOf(p.model_id || p.model);
   if (model && !sub) out.model = model;
+  const context = contextOf(p);
+  if (context) out.context = context;
 
   if (p.prompt != null) out.prompt = p.prompt;
   if (hook === 'SessionStart') out.source = p.composer_mode || 'cursor';
@@ -49,9 +86,8 @@ export function mapCursor(p) {
   if (hook === 'PreCompact' && p.trigger) out.trigger = p.trigger;
   if (hook === 'StopFailure') out.error = String(p.error_message || p.status || 'error');
 
+  if (child && (sub || p.parent_conversation_id)) out.agent_id = String(child);
   if (sub) {
-    const id = p.subagent_id || p.agent_id;
-    if (id) out.agent_id = String(id);
     if (p.subagent_type) out.agent_type = String(p.subagent_type);
     if (p.task) out.task = String(p.task);
     const subModel = modelOf(p.subagent_model);

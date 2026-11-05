@@ -52,7 +52,19 @@ export function renderSessionHead() {
   $('ds-read').textContent = s.counts?.read ?? 0; $('ds-edit').textContent = s.counts?.edit ?? 0; $('ds-cmd').textContent = s.counts?.cmd ?? 0;
   $('ds-time').textContent = s.taskStart && s.status !== 'rest' ? fmtClock((nowMs() - s.taskStart) / 1000) : '–';
   const u = s.usage;
-  $('ds-ctx').textContent = u ? `${Math.round((u.ctx / u.ctxMax) * 100)}%` : '–'; $('ds-ctx').parentElement.title = u ? tr('drawer.tokens', { used: fmtTok(u.ctx), max: fmtTok(u.ctxMax), model: u.model }) : '';
+  const ctxEl = $('ds-ctx'), ctxCap = ctxEl.nextElementSibling;
+  if (ctxCap && !ctxCap.dataset.word) ctxCap.dataset.word = ctxCap.textContent;
+  const sub = state.subView ? subInfo(s, state.subView) : null;
+  if (sub) {
+    const line = subCtxLine(sub);
+    const max = sub.ctxMax || 0, used = Number.isFinite(sub.ctx) ? sub.ctx : null;
+    ctxEl.textContent = used != null && max ? `${Math.round((used / max) * 100)}%` : '–';
+    ctxEl.parentElement.title = line;
+    if (ctxCap) ctxCap.textContent = used != null && max ? `${fmtTok(used)} / ${fmtTok(max)}` : (max ? fmtTok(max) : ctxCap.dataset.word);
+  } else {
+    ctxEl.textContent = u ? `${Math.round((u.ctx / u.ctxMax) * 100)}%` : '–'; ctxEl.parentElement.title = u ? tr('drawer.tokens', { used: fmtTok(u.ctx), max: fmtTok(u.ctxMax), model: u.model }) : '';
+    if (ctxCap) ctxCap.textContent = ctxCap.dataset.word;
+  }
   $('ds-cost').textContent = u ? fmtUsd(u.cost) : '–'; $('ds-cost').parentElement.title = tr('drawer.priceNote');
   const n = s.subs?.length || 0;
   $('tab-subs').textContent = n ? tr('drawer.tabSubsN', { n }) : tr('drawer.tabSubs');
@@ -335,6 +347,14 @@ export function renderChat(scrollEnd) {
 let jumpBtn;
 function syncJump() { const b = $('ds-body'); jumpBtn.hidden = !(tab === 'chat' || (tab === 'subs' && state.subView)) || b.scrollHeight - b.scrollTop - b.clientHeight < 240; }
 const subInfo = (s, id) => [...(s?.subs || []), ...(s?.doneSubs || [])].find((y) => y.id === id);
+// Percent of the window, and the window itself. Cursor sends the fill on compaction and the size with the model.
+function subCtxLine(x) {
+  if (!x?.ctxMax && !Number.isFinite(x?.ctx)) return '';
+  const max = x.ctxMax || 0, used = Number.isFinite(x.ctx) ? x.ctx : null;
+  if (used != null && max) return tr('drawer.ctxBoth', { pct: Math.round((used / max) * 100), used: fmtTok(used), max: fmtTok(max) });
+  if (max) return tr('drawer.ctxWindow', { max: fmtTok(max) });
+  return '';
+}
 export function renderSubs(scrollEnd = false) {
   if (tab !== 'subs') return;
   const s = sessions.get(state.selectedId), body = $('ds-body');
@@ -346,6 +366,7 @@ export function renderSubs(scrollEnd = false) {
     back.addEventListener('click', () => { state.subView = null; renderSubs(); });
     const pill = el('span', 'pill', x && !x.endedAt ? tr('drawer.working') : tr('drawer.done')); pill.dataset.status = x && !x.endedAt ? 'work' : 'rest';
     head.append(back, el('b', null, x ? `${x.type}${x.desc ? ': ' + x.desc : ''}` : tr('drawer.subagent')), pill);
+    const ctxLine = subCtxLine(x); if (ctxLine) head.append(el('span', 'sub-ctx', ctxLine));
     const wrap = el('div'); wrap.append(head, subItems.length ? buildChat(subItems, x?.type || tr('drawer.subagent')) : el('p', 'chat-empty', tr('drawer.loadingSub')));
     body.replaceChildren(wrap);
     if (scrollEnd || nearEnd) body.scrollTop = body.scrollHeight;
@@ -359,8 +380,8 @@ export function renderSubs(scrollEnd = false) {
     const b = el('button', 'sub-card'); b.type = 'button';
     const ic = el('span', 'fi-ico'); if (running) ic.dataset.tone = 'blue'; ic.append(icon(running ? 'sparkle' : 'check'));
     const steps = tr('drawer.steps', { n: x.steps || 0 });
-    const m = modelLong(x.model);
-    b.append(ic, el('b', null, `${x.type}${x.desc ? ' · ' + x.desc : ''}`), el('small', null, [m, running ? steps : tr('drawer.doneAt', { time: hhmm(x.endedAt) })].filter(Boolean).join(' · ')),
+    const m = modelLong(x.model), ctx = subCtxLine(x);
+    b.append(ic, el('b', null, `${x.type}${x.desc ? ' · ' + x.desc : ''}`), el('small', null, [m, ctx, running ? steps : tr('drawer.doneAt', { time: hhmm(x.endedAt) })].filter(Boolean).join(' · ')),
       el('span', null, running ? (x.last ? cap(verb(x.last)) : tr('drawer.starting')) : tr('drawer.subDoneMeta', { steps, time: hhmm(x.startedAt) })));
     b.addEventListener('click', () => { state.subView = x.id; subItems = []; renderSubs(); loadLog(true); });
     return b;

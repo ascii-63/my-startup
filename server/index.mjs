@@ -329,7 +329,8 @@ function freeDesk() {
   for (let i = 0; i < DESKS; i++) if (!used.has(i)) return i;
   return -1;
 }
-const pubSub = (x) => ({ id: x.id, type: x.type, desc: x.desc || '', last: x.last || null, startedAt: x.startedAt, endedAt: x.endedAt || null, steps: x.steps || 0, model: x.model || '' });
+const pubSub = (x) => ({ id: x.id, type: x.type, desc: x.desc || '', last: x.last || null, startedAt: x.startedAt, endedAt: x.endedAt || null, steps: x.steps || 0, model: x.model || '',
+  ctx: Number.isFinite(x.ctx) ? x.ctx : null, ctxMax: Number.isFinite(x.ctxMax) ? x.ctxMax : null });
 const pub = (s) => ({ id: s.id, pid: s.pid, name: s.name, title: s.title || '', dir: tilde(s.cwd), link: s.link, desk: s.desk, status: s.status, lastPrompt: s.lastPrompt && oneLine(unwrapPaste(s.lastPrompt)),
   taskStart: s.taskStart, counts: s.counts, subs: Object.values(s.subs).map(pubSub), doneSubs: (s.doneSubs || []).map(pubSub), last: s.last, acct: acctOf(s),
   entry: s.entry || '', moved: s.parked ? { to: acctShown(s.parked.to), at: s.parked.at } : null,
@@ -389,6 +390,14 @@ function ensureSub(s, agentId, type, now) {
   }
   if (type && x.type === 'agent') x.type = type;
   return x;
+}
+// Cursor's preCompact reports the fill (tokens and percent) and the window. A model param only knows the window.
+function rememberContext(box, c) {
+  if (!box || !c || typeof c !== 'object') return;
+  const size = numOr(c.size), tokens = numOr(c.tokens), pct = numOr(c.pct);
+  if (size) box.ctxMax = size;
+  if (tokens != null) box.ctx = tokens;
+  else if (pct != null && box.ctxMax) box.ctx = Math.round((box.ctxMax * pct) / 100);
 }
 function finishSub(s, agentId, now) {
   const x = s.subs[agentId];
@@ -1043,6 +1052,7 @@ async function onHook(p) {
   const bgTask = run?.mode === 'bg' ? run : null;   // (a background session: its card's steps and its answer come from here)
   const agent = p.agent_id || null;
   if (agent && ev !== 'SubagentStop') ensureSub(s, agent, p.agent_type, now).seenAt = now;
+  if (agent && s.subs[agent]) rememberContext(s.subs[agent], p.context);
   const prevStatus = s.status;
   let e = null; // event for the page
   let toFeed = true;

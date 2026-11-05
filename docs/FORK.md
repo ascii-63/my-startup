@@ -13,7 +13,7 @@ Claude Code hooks ──POST /event──▶ server/index.mjs ──SSE /stream�
 Cursor agent     ──hooks/cursor.mjs──▶ same /event
 ```
 
-Architecture detail is in `docs/ARCHITECTURE.md`. Product behavior is in `README.md` (English) and `README.vi.md`.
+Architecture detail is in `docs/ARCHITECTURE.md`. Product behavior is in `README.md` (English) and `README.vi.md`. Day-to-day run steps for this fork are in [QUICKSTART.md](QUICKSTART.md).
 
 ## What the owner wants from the original
 
@@ -53,8 +53,14 @@ Touched (leave `package-lock.json` out of a feature commit; the two-line change 
 - `src/office/ui/settings.js`, `topbar.js`, `phone.js` — missing plan nodes do not throw
 - `src/office/ui/mac-drawer.js` — `renderLimits` skips the pill and card; the 80% / 95% toast remains
 - `src/office/ui/burn.js` — drawer no longer binds `#plan-burn`; it still opens from the group chat ••• menu and from `?burn`
-- `src/office/ui/activity.js` — `cost` dropped from `KPIS`
+- `src/office/ui/activity.js` — `cost` dropped from `KPIS`; activity **feed** lists only the local calendar **today** (replay still uses saved history)
 - `src/styles/sessions.css` — `.kpis` is four equal columns
+- `hooks/cursor-map.mjs` — optional `context` (window from `model_params`, fill from `preCompact`) for subagents
+- `server/index.mjs` — `rememberContext` on subagent records; `pubSub` exposes `ctx` / `ctxMax`
+- `src/office/ui/session-drawer.js` — subagent view shows context **percent · used / max**; main Cursor chat context still empty
+- `src/i18n/locales/en/drawer.js`, `vi/drawer.js` — `ctxBoth`, `ctxWindow`
+- `src/styles/chat.css` — `.sub-ctx` in subagent header
+- `docs/QUICKSTART.md` — branch quick start (Cursor-only, Windows Node path, UI notes)
 
 Still pointing at the removed pill, until updated:
 
@@ -70,7 +76,7 @@ Do these in order.
 ### 1. Finish the UI cut
 
 - Update the three e2e files above if they still click `#btn-plan`.
-- With the server up, open `http://localhost:4310` and confirm: no Claude plan pill, activity board has four tiles and no API price, the office still connects, Escape and the phone sheets do not throw.
+- With the server up, open `http://localhost:4310` and confirm: no Claude plan pill, activity board has four tiles and no API price, activity feed shows **today only**, the office still connects, Escape and the phone sheets do not throw. Spawn a subagent and open it in the drawer: context line appears when Cursor sends `preCompact` or a window size.
 - Commit only when asked. Stage the UI files, not `package-lock.json`.
 
 ### 2. Make a Cursor person readable
@@ -81,6 +87,7 @@ A Cursor session has no `~/.claude/sessions` pid file and its transcript is not 
 - Show the last assistant text when the transcript actually contains it.
 - Keep the subagent brief on `task` (already wired on `SubagentStart`).
 - Keep the model chip. Search in the session list already includes the model id.
+- Main-session context fill for Cursor (not only subagents) would need new hook fields or transcript parsing; subagent **ctx** / **ctxMax** from hooks is already wired.
 
 ### 3. Make the hooks survive on this Windows machine
 

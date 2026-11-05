@@ -1,6 +1,6 @@
 # Agent notes
 
-This checkout is a fork of khanh020905/my-office, used as a Cursor office. Read [docs/FORK.md](docs/FORK.md) before changing it. That file is the handoff: what the owner wants customized, what is already on `feat/cursor-sessions`, and the next work.
+This checkout is a fork of khanh020905/my-office, used as a Cursor office. Read [docs/FORK.md](docs/FORK.md) before changing it. That file is the handoff: what the owner wants customized, what is already on `feat/cursor-sessions`, and the next work. To run the office from this repo (Node on PATH, hooks, what to expect in the UI), see [docs/QUICKSTART.md](docs/QUICKSTART.md).
 
 Operating constraints (also in `.cursor/rules/fork-intent.mdc`):
 

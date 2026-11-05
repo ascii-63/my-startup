@@ -1,6 +1,6 @@
 // The activity column and the session list.
 import { state } from '../core/state.js';
-import { $, el, fmtBytes, fmtClock, hhmm, nowMs } from '../core/env.js';
+import { $, el, fmtBytes, fmtClock, hhmm, nowMs, replay } from '../core/env.js';
 import { STATUS_LABEL, verb } from './event-text.js';
 import { TYPE_ICON, TYPE_TONE, icon } from './icons.js';
 import { hoverRing, selRing } from '../interact/rings.js';
@@ -71,10 +71,16 @@ function alertCard(e) {
   li.append(box);
   return li;
 }
+// The column is today only. A replay keeps whatever day it is playing.
+const onThisDay = (ts) => {
+  if (replay.on) return true;
+  const a = new Date(ts), b = new Date();
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+};
 export function renderFeed() {
   const list = $('feed-list');
   const latest = new Map(); for (const e of state.feed) latest.set(e.sess, e.id);
-  const rows = state.feed.filter((e) => (feedFilter === 'all' || ATT.has(e.type)) && kindOk(e)).slice(-90).reverse();
+  const rows = state.feed.filter((e) => onThisDay(e.ts) && (feedFilter === 'all' || ATT.has(e.type)) && kindOk(e)).slice(-90).reverse();
   list.replaceChildren();
   if (!rows.length) list.append(el('li', 'fi-empty', tr(feedFilter === 'att' ? 'activity.empty.att' : typeFilter.size ? 'activity.empty.type' : 'activity.empty.all')));
   const groups = [];
@@ -88,7 +94,7 @@ export function renderFeed() {
     const s = sessions.get(g.sess);
     list.append(groupCard(g, s?.status === 'work' && g.items.some((e) => latest.get(g.sess) === e.id)));
   }
-  const att = state.feed.filter((e) => ATT.has(e.type) && nowMs() - e.ts < 3600e3).length;
+  const att = state.feed.filter((e) => onThisDay(e.ts) && ATT.has(e.type) && nowMs() - e.ts < 3600e3).length;
   $('att-count').hidden = !att; $('att-count').textContent = att;
 }
 let feedQueued = false;
